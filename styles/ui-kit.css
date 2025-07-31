@@ -1,0 +1,195 @@
+@import url('tokens.css');
+
+:root{--header-h:96px;}
+
+body{font:400 var(--font-size-base)/1.4 "Segoe UI",sans-serif;color:#333;background:var(--color-bg);} 
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:var(--space-m) var(--space-l);border:none;border-radius:var(--radius-m);font-weight:600;font-size:var(--font-size-base);cursor:pointer;transition:background .2s,transform .05s;user-select:none}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:var(--color-primary);color:#fff;}
+.btn-danger{background:var(--color-error);color:#fff;}
+.btn-disabled{opacity:.5;cursor:default}
+
+/* Cards */
+.card{background:var(--color-surface);border-radius:var(--radius-m);padding:var(--space-l);box-shadow:0 2px 4px rgba(0,0,0,.15);
+  color:#fff;}
+
+/* Scrollbar (узкий серый) */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-thumb{background:#666;border-radius:3px}
+
+/* Bottom navigation bar */
+#bottom-nav{
+  position:fixed;left:0;right:0;bottom:0;
+  height:48px; /* из макета */
+  padding:12px 12px 12px 12px; /* TRBL */
+  display:flex;align-items:center;justify-content:space-around;
+  background:#4D4D4D;
+  box-shadow:0 -2px 6px rgba(0,0,0,.15);
+  backdrop-filter:blur(6px);
+  z-index:10;
+}
+#bottom-nav button{
+  flex:1;
+  height:100%;border:none;background:none;color:#FFF;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:4px;font-size:12px;font-weight:600;cursor:pointer;
+}
+#bottom-nav button .icon{width:24px;height:24px;margin-bottom:4px;}
+#bottom-nav button.active{color:var(--color-primary);}
+
+/* UI root wrapper */
+#ui-root{position:fixed;inset:0;max-width:440px;margin:0 auto;pointer-events:none;z-index:50;}
+#ui-root *{pointer-events:auto;}
+
+/* hide old panels */
+#money-panel,#credits-panel{display:none!important;}
+
+/* Side bar update */
+.side-bar{position:fixed;margin-right:-16px;margin-top:80px;right:0;width:56px;height:304px;background:#4D4D4D;border-top-left-radius:28px;border-bottom-left-radius:28px;padding:12px 0;display:flex;flex-direction:column;align-items:center;gap:0;}
+.side-btn{width:56px;height:56px;background:#4D4D4D;border:none;border-radius:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background-color 0.2s ease;}
+.side-btn img{width:24px;height:24px;}
+.side-btn.active{background:#fff;color:#4D4D4D;}
+.side-btn.panel-active{background:#fff;color:#4D4D4D;}
+.side-sep{width:24px;height:1px;background:#6d6d6d;margin:8px 0;}
+
+/* Info panel */
+.info-stack{position:fixed;top:160px;left:16px;display:flex;flex-direction:column;gap:8px;width:auto;}
+.info-row{min-width:68px;height:28px;display:flex;align-items:center;gap:6px;background:#4D4D4D;border-radius:32px;padding:4px 12px;color:#fff;font-size:16px;justify-content:flex-start;}
+.add-credits{width:20px;height:20px;background:#6d6d6d;border:none;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-left:auto;cursor:pointer;}
+.add-credits img{width:20px;height:20px;}
+.info-ref{width:56px;height:28px;display:flex;align-items:center;justify-content:center;gap:6px;background:#4D4D4D;border-radius:28px;padding:4px;color:#fff;font-size:16px;}
+.info-circle{width:56px;height:56px;background:#4D4D4D;border-radius:32px;color:#fff;font-size:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4px;}
+
+/* Header */
+.app-header{position:fixed;top:0;left:0;right:0;height:96px;background:#4D4D4D;padding:12px 4px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;z-index:15;}
+.app-logo{width:120px;height:auto;justify-content:center;}
+.news-bar{position:absolute;left:0;right:0;bottom:0;padding:0 16px;height:14px;display:flex;align-items:center;gap:8px;font-size:12px;color:#fff;background:#4D4D4D;}
+.news-label{font-weight:700;font-size:14px;letter-spacing:0.02em;text-transform:uppercase;position:relative;}
+.news-text{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px;opacity:1;}
+.info-ic{width:14px;height:14px;opacity:0.5;}
+
+/* push body down below header */
+#three-canvas{margin-top:var(--header-h);}
+
+/* bottom nav active dim others */
+#bottom-nav button{opacity:.4;}
+#bottom-nav button.active{opacity:1;color:#fff;}
+
+/* Phone panel */
+.phone-panel{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:260px;height:480px;background:#4D4D4D;border-radius:24px;padding:16px;display:flex;flex-direction:column;align-items:center;z-index:120!important;box-shadow:0 4px 16px rgba(0,0,0,.4);} 
+.phone-close{position:absolute;top:8px;right:8px;background:none;border:none;color:#fff;font-size:24px;cursor:pointer;}
+.phone-home{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin-top:40px;width:100%;}
+.phone-app{width:92px;height:92px;background:#6d6d6d;border:none;border-radius:20px;color:#fff;font-size:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;}
+.phone-app .icon{width:36px;height:36px;margin-bottom:4px;}
+.phone-screen{width:100%;flex:1;display:flex;flex-direction:column;align-items:center;color:#fff;}
+.phone-screen h3{margin:24px 0 16px;font-size:18px;}
+.phone-back{background:#1976d2;border:none;border-radius:8px;color:#fff;padding:6px 12px;cursor:pointer;}
+#orders-container .order-item{display:flex;align-items:center;justify-content:space-between;gap:6px;width:100%;background:#6d6d6d;border-radius:8px;padding:6px 8px;margin-bottom:4px;font-size:12px;}
+.order-item input[type=checkbox]{width:16px;height:16px;accent-color:#4caf50;}
+
+/* Bookeio layout */
+.bookeio-grid{display:flex;flex-direction:column;width:100%;gap:8px;}
+.bookeio-column{width:100%;display:flex;flex-direction:column;align-items:center;background:rgba(0,0,0,.15);border-radius:8px;padding:6px;}
+.bookeio-column h4{margin:4px 0;font-size:12px;letter-spacing:.5px;}
+.app-item-img{width:60px;height:60px;margin:4px 0;}
+.slider-row{display:flex;align-items:center;width:100%;gap:4px;}
+.slider-row input[type=range]{flex:1;}
+.cost-label{font-size:12px;min-width:44px;text-align:right;}
+.order-btn{margin-top:4px;background:#000;border:2px solid #fff;color:#fff;padding:4px;border-radius:4px;font-size:12px;width:100%;cursor:pointer;}
+.qty-label{font-size:12px;min-width:48px;text-align:center;}
+
+/* Base layer for persistent UI */
+.panel{z-index:110!important;}
+/* Modal/opened panels above base UI */
+.modal{position:fixed!important;z-index:130!important;}
+
+/* Notification red dot */
+.red-dot{position:absolute;top:4px;right:4px;width:10px;height:10px;border-radius:5px;background:#ff1744;display:none;}
+
+/* Explicit z-index for each modal panel */
+#phone-panel,
+#shop-panel,
+#upgrade-panel,
+#factory-upgrade-panel,
+#city-panel,
+#offline-panel,
+#crate-overlay,
+#profile-panel {
+  z-index:130!important;
+}
+
+#messages-app{display:flex;flex-direction:column;align-items:center;width:100%;}
+#messages-container{flex:1;width:100%;overflow-y:auto;padding-right:4px;box-sizing:border-box;}
+#messages-container::-webkit-scrollbar{width:4px;} 
+#messages-container::-webkit-scrollbar-thumb{background:#888;border-radius:2px;} 
+
+/* === PANEL ANIMATIONS === */
+/* Анимация появления панелей снизу вверх */
+@keyframes slideInFromBottom {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOutToBottom {
+    from {
+        transform: translateY(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+}
+
+/* Специальные анимации для city-panel, которая использует transform: translate(-50%,-50%) */
+@keyframes slideInFromBottomCity {
+    from {
+        transform: translate(-50%, calc(-50% + 100%));
+        opacity: 0;
+    }
+    to {
+        transform: translate(-50%, -50%);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOutToBottomCity {
+    from {
+        transform: translate(-50%, -50%);
+        opacity: 1;
+    }
+    to {
+        transform: translate(-50%, calc(-50% + 100%));
+        opacity: 0;
+    }
+}
+
+/* Классы для анимации панелей */
+.panel.modal {
+    transition: opacity 0.3s ease;
+}
+
+.panel.modal.slide-in {
+    animation: slideInFromBottom 0.4s ease-out forwards;
+}
+
+.panel.modal.slide-out {
+    animation: slideOutToBottom 0.3s ease-in forwards;
+}
+
+/* Специальная обработка для city-panel */
+#city-panel.slide-in {
+    animation: slideInFromBottomCity 0.4s ease-out forwards;
+}
+
+#city-panel.slide-out {
+    animation: slideOutToBottomCity 0.3s ease-in forwards;
+} 

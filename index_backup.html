@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Booke 3D Map</title>
+    <link rel="stylesheet" href="styles/tokens.css"/>
+    <link rel="stylesheet" href="styles/ui-kit.css"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
+    <meta charset="utf-8"/>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script>
+      if (window.Telegram && window.Telegram.WebApp) {
+        window.Telegram.WebApp.disableVerticalSwipes();
+        window.Telegram.WebApp.requestFullscreen();
+      }
+    </script>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: "Segoe UI", Arial, sans-serif; }
+        canvas { display: block; }
+        /* Общие стили для панелей */
+        .panel{position:absolute;z-index:10;user-select:none}
+        /* Панель денег (левый верх) */
+        #money-panel{top:10px;left:10px;background:#2d6a4f;border-radius:8px;padding:4px 10px;color:#fff;font-weight:600;display:flex;align-items:center;gap:6px}
+        #money-panel i{color:#ffeb3b}
+        /* Вертикальная панель кнопок (право) */
+        #right-panel{top:80px;right:10px;display:flex;flex-direction:column;gap:8px}
+        #right-panel button{width:42px;height:42px;border:none;border-radius:6px;background:#4D4D4D;color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer}
+        #right-panel button:hover{background:#444}
+        /* Нижняя панель навигации */
+        #bottom-nav{left:0;right:0;bottom:0;height:60px;background:#ffffffee;display:flex;justify-content:space-around;align-items:center;backdrop-filter:blur(6px);box-shadow:0 -2px 6px rgba(0,0,0,.15)}
+        #bottom-nav button{flex:1;height:100%;border:none;background:none;color:#666;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:12px;gap:4px;cursor:pointer}
+        #bottom-nav button i{font-size:18px}
+        #bottom-nav button.active{color:#2196f3}
+        /* Upgrade button styles */
+        #upgrade-btn{transition:transform .05s}
+        #upgrade-btn:active{transform:scale(0.97)}
+        /* Switch active */
+        .switch-btn.active{background:#1976d2 !important;opacity:1 !important}
+
+        /* Панели баланса */
+        .balance-panel{display:flex;align-items:center;border-radius:6px;padding:4px 8px;font-weight:600;color:#fff;gap:6px}
+        #money-panel{background:#2d6a4f;}
+        #credits-panel{background:#000000dd}
+        #credits-panel i{color:#b71c1c}
+        /* plus circle */
+        #credits-plus{position:absolute;top:-8px;right:-20px;width:38px;height:38px;background:#00c853;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;cursor:pointer;box-shadow:0 0 4px rgba(0,0,0,.4)}
+        /* Сейфы */
+        .crate{cursor:pointer;border-radius:6px;position:relative;overflow:hidden;transition:transform .1s}
+        .crate:active{transform:scale(0.96)}
+        /* Оверлей открытия сейфа */
+        #crate-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:40;color:#fff;font-family:"Segoe UI",Arial,sans-serif}
+        /* Оверлей оффлайн дохода */
+        #offline-panel{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:50;font-family:"Segoe UI",Arial,sans-serif}
+        #offline-content{background:#eeeeee;border-radius:12px;padding:18px;width:90%;max-width:320px;text-align:center;position:relative}
+        #offline-content h2{background:#000;color:#fff;font-size:18px;margin:-18px -18px 12px;border-radius:12px 12px 0 0;padding:8px 0}
+        #offline-money{background:#4caf50;border:3px solid #2e7d32;border-radius:6px;padding:12px;margin-bottom:8px;font-size:22px;font-weight:700;color:#003300;display:flex;flex-direction:column;gap:4px;align-items:center}
+        #offline-money img{width:60px;height:auto}
+        #offline-time{font-size:14px;margin-bottom:12px;color:#333;font-weight:600}
+        /* progress bar */
+        #offline-progress-wrapper{background:#004d40;border-radius:6px;padding:4px 6px 8px;position:relative;margin-bottom:12px}
+        #offline-progress-bg{position:relative;width:100%;height:18px;background:#00796b;border-radius:4px;overflow:hidden}
+        #offline-progress-fill{position:absolute;top:0;left:0;height:100%;background:#00e676;width:0%}
+        #offline-time-labels{display:flex;justify-content:space-between;font-size:10px;font-weight:700;color:#fff;position:absolute;top:-10px;left:0;right:0;padding:0 2px}
+        /* кнопки */
+        .off-btn{border:none;border-radius:6px;padding:8px 12px;font-size:14px;font-weight:700;cursor:pointer;color:#fff;margin:4px 2px}
+        #btn-off-collect{background:#2e7d32;flex:1}
+        #btn-off-x3{background:#1976d2;flex:1}
+        #btn-off-x4{background:#b71c1c;flex:1;display:flex;align-items:center;justify-content:center;gap:4px}
+        #btn-off-x4 i{color:#fff}
+        /* Панель города */
+        #city-panel{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:90%;max-width:400px;background:#e0e0e0;border-radius:16px;padding:0;color:#2d2d2d;z-index:35;display:none;font-family:'Segoe UI',Arial,sans-serif;text-align:left;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.3);}
+        #city-panel h2{background:none;margin:0;border-radius:0;padding:0;font-size:20px;font-weight:700;color:#2d2d2d;text-align:center}
+        #city-panel h3{margin:0 0 12px;font-size:14px;font-weight:700;color:#2d2d2d}
+        #city-panel h4{margin:0 0 8px;font-size:16px;font-weight:700;color:#2d2d2d}
+        #city-panel p{margin:8px 0 0;font-size:12px;color:#666;line-height:1.4;text-align:center}
+        .city-item{position:relative;background:#e0e0e0;border-radius:12px;margin:0 0 12px;padding:16px;display:flex;align-items:center;gap:10px;color:#2d2d2d;border:1px solid #ccc}
+        .city-item img{width:60px;height:60px;border-radius:6px}
+        .city-item .info{flex:1;text-align:left;font-size:14px}
+        .city-item .info h3{margin:0 0 4px;font-size:16px}
+        .city-item button{background:#2d2d2d;border:none;border-radius:8px;color:#fff;font-weight:600;padding:8px 16px;cursor:pointer;font-size:12px}
+        .city-item button:disabled{opacity:.5;cursor:default}
+        /* общий стиль svg-иконок */
+        .icon{width:20px;height:20px;display:inline-block;vertical-align:middle}
+        /* Панель друзей стили */
+        .friend-item{display:flex;align-items:center;gap:10px;background:#bcbcbc;border-radius:12px;padding:8px 12px;position:relative}
+        .friend-item img{width:40px;height:40px;border-radius:8px;background:#666}
+        .badge-new{position:absolute;top:-6px;left:-6px;background:#000;color:#fff;font-size:9px;padding:2px 4px;border-radius:4px}
+        .rbc-tag{margin-left:auto;display:flex;align-items:center;gap:4px;font-size:12px;font-weight:700;background:#9e9e9e;padding:2px 6px;border-radius:6px}
+        .rbc-tag i{font-style:normal}
+        /* --------- КАРТА С РОМБАМИ --------- */
+        #map-container{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:100%;max-width:480px;height:380px;pointer-events:none;}
+        .diamond{position:absolute;width:180px;height:180px;background:linear-gradient(145deg,#6d6d6d 0%,#4d4d4d 50%,#3b3b3b 100%);border:4px solid #aaa;border-radius:16px;transform:rotate(45deg) scale(1);transition:transform .3s,opacity .3s,box-shadow .3s;cursor:pointer;pointer-events:auto;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 12px rgba(0,0,0,.4);}
+        .diamond.active{box-shadow:0 10px 18px rgba(0,0,0,.6);}
+        .diamond:hover{box-shadow:0 8px 16px rgba(0,0,0,.5);}
+        .diamond .label{transform:rotate(-45deg);color:#fff;font-weight:700;text-align:center;font-size:18px;pointer-events:none;}
+        /* позиции ромбов */
+        #diamond-library {top:40px;left:calc(50% - 240px);display:none;} /* верх-лево */
+        #diamond-factory {top:40px;right:calc(50% - 240px);display:none;} /* верх-право */
+        #diamond-storage {bottom:40px;left:calc(50% - 240px);display:none;} /* низ-лево */
+        #diamond-print   {bottom:40px;right:calc(50% - 240px);display:none;} /* низ-право */
+        /* кнопка "Вся карта" */
+        #btn-show-all{position:absolute;bottom:200px;left:50%;transform:translateX(-50%);padding:8px 18px;border:none;border-radius:12px;background:#424242;color:#fff;font-weight:700;z-index:20;cursor:pointer;display:none;align-items:center;gap:8px;}
+        /* --------- ПАНЕЛЬ ЗДАНИЯ --------- */
+        #building-info-panel{position:fixed;left:0;right:0;top:50vh;bottom:60px;background:#e0e0e0;border-radius:24px 24px 0 0;box-shadow:0 -4px 12px rgba(0,0,0,.35);padding:18px 14px;overflow-y:auto;display:none;z-index:30;font-family:"Segoe UI",Arial,sans-serif;}
+        .info-section{background:#fff;border-radius:16px;padding:14px;margin-bottom:12px;}
+        .btn-main{width:100%;background:#000;border:none;color:#fff;border-radius:14px;padding:14px;font-size:16px;font-weight:700;cursor:pointer;}
+        .progress-bar{height:14px;background:#bdbdbd;border-radius:7px;overflow:hidden;margin:6px 0 10px;}
+        .progress-bar .fill{height:100%;width:0;background:#4caf50;}
+        /* скрываем старые круги дохода */
+        #income-progress,#income-bank,#factory-income-progress,#factory-income-bank,#storage-sale-progress{display:none!important;}
+    </style>
+</head>
+<body>
+    <div id="ui-root">
+        <!-- Header -->
+        <div id="app-header" class="app-header">
+            <img src="assets/icons/Logo_full.svg" alt="logo" class="app-logo">
+            <div class="news-bar"><span class="news-label">НОВОСТИ</span><span class="news-text">Lorem ipsum dolor sit amet, …</span><img src="assets/icons/info.svg" class="icon info-ic" alt></div>
+        </div>
+
+        <!-- === КАРТА-РОМБЫ === -->
+        <div id="map-container">
+            <button id="btn-show-all">
+                <img src="assets/icons/arrow-small-left.svg" alt="←" style="width:16px;height:16px;">
+                Вся карта
+            </button>
+        </div>
+        
+        <div id="building-info-panel">
+        </div>
+        <!-- === /КАРТА === -->
+    <!-- Панель денег -->
+    <div id="money-panel" class="panel balance-panel" style="top:10px;left:10px;"><i class="fa-solid fa-money-bill"></i><span id="money-amount">100</span></div>
+
+    <!-- Панель кредитов -->
+    <div id="credits-panel" class="panel balance-panel" style="top:10px;right:80px;position:absolute;">
+        <i class="fa-solid fa-circle"></i><span id="credits-amount">0</span>
+        <div id="credits-plus"><i class="fa-solid fa-plus"></i></div>
+    </div>
+
+    <!-- Вертикальная панель кнопок -->
+    <div id="right-panel" class="panel side-bar">
+        <button class="side-btn" id="btn-sound"   title="Звук"><img src="assets/icons/bullhorn.svg" class="icon" alt></button>
+        <div class="side-sep"></div>
+        <button class="side-btn" id="btn-tasks"   title="Подарки"><img src="assets/icons/completed.svg" class="icon" alt></button>
+        <div class="side-sep"></div>
+        <button class="side-btn" id="btn-phone"   title="Телефон" style="position:relative;"><img src="assets/icons/tablet.svg" class="icon" alt><span class="red-dot" id="phone-dot"></span></button>
+        <div class="side-sep"></div>
+        <button class="side-btn active" id="btn-news"    title="Статистика"><img src="assets/icons/chart.svg" class="icon" alt></button>
+        <div class="side-sep"></div>
+        <button class="side-btn" id="btn-settings" title="Настройки"><img src="assets/icons/settings.svg" class="icon" alt></button>
+    </div>
+
+    <!-- Статистика слева -->
+    <div id="info-panel" class="panel info-stack">
+        <div class="info-row" id="row-rbc"><img src="assets/icons/token.svg" class="icon" alt><span id="rbc-value">0</span><button id="btn-add-rbc" class="add-credits"><img src="assets/icons/add.svg" class="icon" alt></button></div>
+        <div class="info-row" id="row-bc"><img src="assets/icons/money.svg" class="icon" alt><span id="bc-value">0</span></div>
+        <div class="info-ref" id="row-ref"><img src="assets/icons/people.svg" class="icon" alt><span id="ref-value">0</span></div>
+        <div class="info-circle" id="row-p2p">P2P<br>market</div>
+    </div>
+
+    <!-- Нижняя панель навигации -->
+    <div id="bottom-nav" class="panel" style="background:#4D4D4D;">
+        <button class="active"><img src="assets/icons/store.svg" class="icon" alt="store"><span>Магазин</span></button>
+        <button><img src="assets/icons/book-arrow-right.svg" class="icon" alt="chars"><span>Персонажи</span></button>
+        <button><img src="assets/icons/building.svg" class="icon" alt="city"><span>Город</span></button>
+        <button><img src="assets/icons/ballot-check.svg" class="icon" alt="quests"><span>Задания</span></button>
+        <button><img src="assets/icons/user.svg" class="icon" alt="profile"><span>Профиль</span></button>
+    </div>
+
+    <!-- Панель улучшения здания -->
+    <div id="upgrade-panel" class="panel modal" style="z-index:20;display:none;left:0;right:0;top:15%;margin:auto;width:90%;max-width:360px;background:#333;color:#fff;border-radius:10px;padding:12px;box-shadow:0 4px 12px rgba(0,0,0,.4)">
+        <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #555;padding-bottom:6px;margin-bottom:6px">
+            <div style="display:flex;align-items:center;gap:6px"><i class="fa-solid fa-book"></i><span id="panel-title">Библиотека</span></div>
+            <button id="panel-close" style="background:none;border:none;color:#fff;font-size:20px"><i class="fa-solid fa-circle-xmark"></i></button>
+        </div>
+        <div id="panel-content" style="font-size:14px;">
+            <p>Уровень: <span id="building-level">1</span> | доход: <span id="building-income">0</span>/с</p>
+            <button id="upgrade-btn" style="width:100%;background:#4caf50;border:none;border-radius:6px;color:#fff;padding:8px;margin-top:8px;font-size:16px;cursor:pointer">Улучшить <span id="upgrade-cost">100</span> <i class="fa-solid fa-money-bill"></i></button>
+        </div>
+    </div>
+
+    <!-- Панель улучшения Завода -->
+    <div id="factory-upgrade-panel" class="panel modal" style="z-index:20;display:none;left:0;right:0;top:15%;margin:auto;width:90%;max-width:360px;background:#333;color:#fff;border-radius:10px;padding:12px;box-shadow:0 4px 12px rgba(0,0,0,.4)">
+        <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #555;padding-bottom:6px;margin-bottom:6px">
+            <div style="display:flex;align-items:center;gap:6px"><i class="fa-solid fa-industry"></i><span id="factory-panel-title">Завод</span></div>
+            <button id="factory-panel-close" style="background:none;border:none;color:#fff;font-size:20px"><i class="fa-solid fa-circle-xmark"></i></button>
+        </div>
+        <div id="factory-panel-content" style="font-size:14px;">
+            <p>Уровень: <span id="factory-level">1</span> | доход: <span id="factory-income">0</span>/с</p>
+            <button id="factory-upgrade-btn" style="width:100%;background:#4caf50;border:none;border-radius:6px;color:#fff;padding:8px;margin-top:8px;font-size:16px;cursor:pointer">Улучшить <span id="factory-upgrade-cost">100</span> <i class="fa-solid fa-money-bill"></i></button>
+        </div>
+    </div>
+
+    <!-- Кнопка сброса (только для разработки) -->
+    <button id="reset-data" style="position:fixed;top:140px;left:50%;transform:translateX(-50%);z-index:30;background:#f44336;border:none;color:#fff;padding:6px 10px;border-radius:6px;cursor:pointer">Reset&nbsp;Data</button>
+
+    <!-- Панель магазина -->
+    <div id="shop-panel" class="panel modal" style="display:none;position:fixed;inset:0;z-index:120;justify-content:center;align-items:center;background:rgba(0,0,0,.7);font-family:'Segoe UI',Arial,sans-serif;">
+        <div id="shop-content" style="background:#e0e0e0;border-radius:24px;width:85%;max-width:400px;max-height:85%;overflow-y:auto;padding:12px;position:relative;box-shadow:0 4px 12px rgba(0,0,0,.4);color:#2d2d2d;">
+            
+            <!-- Темно-серый фон за товарами -->
+            <div style="background:#5a5a5a;border-radius:24px;padding:16px;margin-top:8px;">
+                <!-- Header -->
+                <div style="position:relative;text-align:center;margin-bottom:20px;">
+                    <h2 style="margin:0;font-size:18px;font-weight:700;color:#2d2d2d;background:#ccc;padding:8px 16px;border-radius:8px;display:inline-block;">МАГАЗИН</h2>
+                    <button id="shop-close" style="position:absolute;top:0;right:0;background:#000;border:none;border-radius:50%;width:32px;height:32px;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+                </div>
+                
+                <!-- Сейфы Section -->
+                <div style="margin-bottom:24px;">
+                    <h3 style="margin:0 0 16px;font-size:16px;font-weight:700;color:#fff;text-align:center;">Сейфы</h3>
+                    
+                    <!-- Обычный сейф -->
+                    <div class="shop-item-card" data-section="safes" data-index="0" style="background:#fff;border-radius:12px;padding:16px;margin-bottom:12px;position:relative;">
+                        <div style="display:flex;gap:12px;align-items:center;">
+                            <div style="width:60px;height:60px;background:#ccc;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#666;">PNG-image</div>
+                            <div style="flex:1;">
+                                <h4 class="item-name" style="margin:0 0 8px;font-size:16px;font-weight:700;color:#2d2d2d;">Обычный сейф</h4>
+                                <div style="display:flex;justify-content:space-between;font-size:14px;color:#666;margin-bottom:4px;">
+                                    <span>Стоимость</span>
+                                    <span class="item-cost">БЕСПЛАТНО</span>
+                                </div>
+                                <div style="display:flex;justify-content:space-between;font-size:14px;color:#666;align-items:center;">
+                                    <span>Редкость</span>
+                                    <span class="item-rarity">Обычные ★☆☆☆☆</span>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="shop-buy-btn" data-item="safes-free" style="width:100%;background:#000;border:none;border-radius:8px;color:#fff;padding:12px;font-size:14px;font-weight:600;cursor:pointer;margin-top:12px;">Купить</button>
+                        <button class="shop-nav-btn" style="position:absolute;right:-20px;top:50%;transform:translateY(-50%);background:#999;border:none;border-radius:50%;width:32px;height:32px;color:#333;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;">→</button>
+                    </div>
+                </div>
+                
+                <!-- Монеты Section -->
+                <div style="margin-bottom:24px;">
+                    <h3 style="margin:0 0 16px;font-size:16px;font-weight:700;color:#fff;text-align:center;">Монеты</h3>
+                    
+                    <!-- Сундук монет -->
+                    <div class="shop-item-card" data-section="coins" data-index="0" style="background:#fff;border-radius:12px;padding:16px;margin-bottom:12px;position:relative;">
+                        <div style="display:flex;gap:12px;align-items:center;">
+                            <div style="width:60px;height:60px;background:#ccc;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#666;">PNG-image</div>
+                            <div style="flex:1;">
+                                <h4 class="item-name" style="margin:0 0 8px;font-size:16px;font-weight:700;color:#2d2d2d;">Горстка монет</h4>
+                                <div style="display:flex;justify-content:space-between;font-size:14px;color:#666;margin-bottom:4px;">
+                                    <span>Стоимость</span>
+                                    <span class="item-cost"><i class="fa-solid fa-eye" style="color:#666;"></i> 10k</span>
+                                </div>
+                                <div style="display:flex;justify-content:space-between;font-size:14px;color:#666;align-items:center;">
+                                    <span>Редкость</span>
+                                    <span class="item-rarity">Обычные ★☆☆☆☆</span>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="shop-buy-btn" data-item="coins-0" style="width:100%;background:#000;border:none;border-radius:8px;color:#fff;padding:12px;font-size:14px;font-weight:600;cursor:pointer;margin-top:12px;">Купить</button>
+                        <button class="shop-nav-btn" style="position:absolute;left:-20px;top:50%;transform:translateY(-50%);background:#999;border:none;border-radius:50%;width:32px;height:32px;color:#333;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;">←</button>
+                    </div>
+                </div>
+                
+                <!-- Наборы Section -->
+                <div style="margin-bottom:24px;">
+                    <h3 style="margin:0 0 16px;font-size:16px;font-weight:700;color:#fff;text-align:center;">Наборы</h3>
+                    
+                    <!-- Набор -->
+                    <div class="shop-item-card" data-section="sets" data-index="0" style="background:#fff;border-radius:12px;padding:16px;margin-bottom:12px;position:relative;">
+                        <div style="display:flex;gap:12px;align-items:center;">
+                            <div style="flex:1;">
+                                <h4 class="item-name" style="margin:0 0 8px;font-size:16px;font-weight:700;color:#2d2d2d;">Набор Блуми</h4>
+                                <div class="set-price" style="font-size:24px;font-weight:700;color:#2d2d2d;margin-bottom:4px;">500$</div>
+                                <div style="font-size:14px;color:#666;margin-bottom:12px;">Доступно: 9/10</div>
+                            </div>
+                            <div style="width:60px;height:60px;background:#ccc;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#666;">PNG-image</div>
+                        </div>
+                        <button class="shop-buy-btn" data-item="sets-0" style="width:100%;background:#000;border:none;border-radius:8px;color:#fff;padding:12px;font-size:14px;font-weight:600;cursor:pointer;margin-top:12px;">Купить</button>
+                        <button class="shop-nav-btn" style="position:absolute;right:-20px;top:50%;transform:translateY(-50%);background:#999;border:none;border-radius:50%;width:32px;height:32px;color:#333;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;">→</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Оверлей открытия сейфа -->
+    <div id="crate-overlay" class="modal"></div>
+
+    <!-- Оффлайн заработок -->
+    <div id="offline-panel" class="modal">
+        <div id="offline-content">
+            <h2>С ВОЗВРАЩЕНИЕМ!</h2>
+            <div id="offline-money"><img src="https://i.imgur.com/OuO5xsw.png" alt="bill"/><span id="offline-amount">0</span></div>
+            <div id="offline-time">В твоё отсутствие заработок составил:</div>
+            <div id="offline-progress-wrapper">
+                <div id="offline-time-labels"><span>0ч</span><span>21.5ч</span></div>
+                <div id="offline-progress-bg"><div id="offline-progress-fill"></div></div>
+            </div>
+            <div style="display:flex;gap:6px;justify-content:center;margin-bottom:4px">
+                <button id="btn-off-collect" class="off-btn">ПОЛУЧИТЬ</button>
+            </div>
+            <div style="display:flex;gap:6px;justify-content:center">
+                <button id="btn-off-x3" class="off-btn">ПОЛУЧИ x3</button>
+                <button id="btn-off-x4" class="off-btn"><i class="fa-solid fa-circle"></i> 30 | x4</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Панель строительства -->
+    <div id="city-panel" class="modal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:90%;max-width:400px;background:#e0e0e0;border-radius:24px;padding:12px;color:#2d2d2d;z-index:35;font-family:'Segoe UI',Arial,sans-serif;text-align:left;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.3);">
+        <div id="city-content" style="max-height:80vh;overflow-y:auto;padding-right:0;margin-right:-12px;">
+            <style>
+                #city-content::-webkit-scrollbar {
+                    width: 8px;
+                }
+                #city-content::-webkit-scrollbar-track {
+                    background: transparent;
+                }
+                #city-content::-webkit-scrollbar-thumb {
+                    background: #999;
+                    border-radius: 4px;
+                }
+                #city-content::-webkit-scrollbar-thumb:hover {
+                    background: #777;
+                }
+            </style>
+            <button id="city-close" style="position:absolute;top:8px;right:8px;background:none;border:none;font-size:22px;cursor:pointer;color:#2d2d2d"><i class="fa-solid fa-circle-xmark"></i></button>
+            
+            <!-- Header -->
+            <div style="display:flex;justify-content:center;align-items:center;margin-bottom:16px;">
+                <h2 style="margin:0;font-size:18px;font-weight:700;background:#ccc;color:#2d2d2d;padding:8px 16px;border-radius:8px;">ГОРОД</h2>
+            </div>
+            
+            <!-- Main content -->
+            <div style="text-align:center;margin-bottom:20px;">
+                <div style="background:#5a5a5a;color:#fff;padding:12px 16px;border-radius:20px;display:inline-block;">
+                    <h3 style="margin:0 0 4px;font-size:16px;font-weight:700;color:#fff;">Городские объекты</h3>
+                    <p style="margin:0;font-size:12px;color:#fff;">Новые объекты обеспечат рабочие места и экономический рост</p>
+                </div>
+            </div>
+            
+            <!-- Available Buildings Section -->
+            <div style="background:#5a5a5a;border-radius:20px;padding:16px;">
+                <h3 style="margin:0 0 16px;font-size:16px;font-weight:700;color:#fff;text-align:center;">Доступные здания</h3>
+                
+                <!-- Factory Card -->
+                <div style="background:#fff;border-radius:12px;padding:16px;margin-bottom:12px;box-shadow:0 2px 4px rgba(0,0,0,.1);">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+                        <div>
+                            <h4 style="margin:0 0 8px;font-size:16px;font-weight:700;color:#2d2d2d;">Завод</h4>
+                            <div style="font-size:12px;color:#666;margin-bottom:4px;font-weight:600;background:#f0f0f0;padding:2px 6px;border-radius:4px;display:inline-block;">Ожидаемый дневной доход</div>
+                            <div style="display:flex;gap:12px;font-size:12px;color:#2d2d2d;background:#f0f0f0;padding:4px 8px;border-radius:4px;display:inline-block;">
+                                <span>+35k <i class="fa-solid fa-eye" style="color:#666;"></i></span>
+                                <span>+100 <i class="fa-solid fa-bullseye" style="color:#666;"></i></span>
+                            </div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-size:14px;color:#666;margin-bottom:4px;">Редкость</div>
+                            <div style="font-size:14px;color:#2d2d2d;">Обычные</div>
+                            <div style="font-size:16px;color:#000;margin-top:2px;">★☆☆☆☆</div>
+                        </div>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                        <button id="btn-build-factory" style="background:#2d2d2d;color:#fff;border:none;border-radius:8px;padding:8px 20px;font-size:12px;font-weight:600;cursor:pointer;min-width:140px;">Построить -35k <i class="fa-solid fa-eye"></i></button>
+                        <div style="width:60px;height:40px;background:#ccc;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#666;">PNG-image</div>
+                    </div>
+                </div>
+                
+                <!-- Library Card -->
+                <div style="background:#fff;border-radius:12px;padding:16px;margin-bottom:12px;box-shadow:0 2px 4px rgba(0,0,0,.1);">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+                        <div>
+                            <h4 style="margin:0 0 8px;font-size:16px;font-weight:700;color:#2d2d2d;">Библиотека</h4>
+                            <div style="font-size:12px;color:#666;margin-bottom:4px;font-weight:600;background:#f0f0f0;padding:2px 6px;border-radius:4px;display:inline-block;">Ожидаемый дневной доход</div>
+                            <div style="display:flex;gap:12px;font-size:12px;color:#2d2d2d;background:#f0f0f0;padding:4px 8px;border-radius:4px;display:inline-block;">
+                                <span>+50k <i class="fa-solid fa-eye" style="color:#666;"></i></span>
+                                <span>+100 <i class="fa-solid fa-bullseye" style="color:#666;"></i></span>
+                            </div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-size:14px;color:#666;margin-bottom:4px;">Редкость</div>
+                            <div style="font-size:14px;color:#2d2d2d;">Обычные</div>
+                            <div style="font-size:16px;color:#000;margin-top:2px;">★☆☆☆☆</div>
+                        </div>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                        <button id="btn-build-library" style="background:#2d2d2d;color:#fff;border:none;border-radius:8px;padding:8px 20px;font-size:12px;font-weight:600;cursor:pointer;min-width:140px;">Построить -135k <i class="fa-solid fa-eye"></i></button>
+                        <div style="width:60px;height:40px;background:#ccc;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#666;">PNG-image</div>
+                    </div>
+                </div>
+                
+                <!-- Statue Card -->
+                <div style="background:#fff;border-radius:12px;padding:16px;margin-bottom:12px;box-shadow:0 2px 4px rgba(0,0,0,.1);">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+                        <div>
+                            <h4 style="margin:0 0 8px;font-size:16px;font-weight:700;color:#2d2d2d;">Статуя</h4>
+                            <div style="font-size:12px;color:#666;margin-bottom:4px;font-weight:600;background:#f0f0f0;padding:2px 6px;border-radius:4px;display:inline-block;">Ожидаемый дневной доход</div>
+                            <div style="display:flex;gap:12px;font-size:12px;color:#2d2d2d;background:#f0f0f0;padding:4px 8px;border-radius:4px;display:inline-block;">
+                                <span>+205k <i class="fa-solid fa-eye" style="color:#666;"></i></span>
+                                <span>+1500 <i class="fa-solid fa-bullseye" style="color:#666;"></i></span>
+                            </div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-size:14px;color:#666;margin-bottom:4px;">Редкость</div>
+                            <div style="font-size:14px;color:#2d2d2d;">Премиум</div>
+                            <div style="font-size:16px;color:#000;margin-top:2px;">★★★★☆</div>
+                        </div>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                        <button id="btn-build-statue" style="background:#2d2d2d;color:#fff;border:none;border-radius:8px;padding:8px 20px;font-size:12px;font-weight:600;cursor:pointer;min-width:140px;">Построить -500k <i class="fa-solid fa-eye"></i></button>
+                        <div style="width:60px;height:40px;background:#ccc;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#666;">PNG-image</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Phone panel (mobile) -->
+    <div id="phone-panel" class="panel phone-panel modal" style="display:none;">
+        <button id="phone-close" class="phone-close">&times;</button>
+        <!-- Status bar -->
+        <div id="phone-status" style="position:absolute;top:6px;left:8px;font-size:12px;color:#fff;opacity:.8;">--:--</div>
+        <!-- Home grid with app icons -->
+        <div id="phone-home" class="phone-home">
+            <button id="app-bookeio" class="phone-app" style="position:relative;"><img src="assets/icons/book.svg" class="icon" alt><span>BOOKEIO</span></button>
+            <button id="app-delivery" class="phone-app" style="position:relative;"><img src="assets/icons/delivery.svg" class="icon" alt><span>DELIVERY</span></button>
+            <button id="app-messages" class="phone-app" style="position:relative;"><img src="assets/icons/message.svg" class="icon" alt><span>MESSAGES</span><span class="red-dot" id="msg-dot"></span></button>
+        </div>
+        <!-- Bookeio app screen -->
+        <div id="bookeio-app" class="phone-screen" style="display:none;">
+            <h3>BOOKEIO</h3>
+            <div class="bookeio-grid">
+                <div class="bookeio-column">
+                    <h4>ЖУРНАЛЫ</h4>
+                    <img src="assets/icons/book.svg" class="app-item-img" alt>
+                    <div class="slider-row">
+                        <input type="range" id="mag-slider" min="0" max="1000" value="0">
+                        <span id="mag-qty" class="qty-label">0</span>
+                        <span id="mag-cost" class="cost-label">0$</span>
+                    </div>
+                    <button id="btn-order-mag" class="order-btn">ЗАКАЗАТЬ</button>
+                </div>
+                <div class="bookeio-column">
+                    <h4>КНИГИ</h4>
+                    <img src="assets/icons/book.svg" class="app-item-img" alt>
+                    <div class="slider-row">
+                        <input type="range" id="book-slider" min="0" max="1000" value="0">
+                        <span id="book-qty" class="qty-label">0</span>
+                        <span id="book-cost" class="cost-label">0$</span>
+                    </div>
+                    <button id="btn-order-book" class="order-btn">ЗАКАЗАТЬ</button>
+                </div>
+            </div>
+            <button class="phone-back" style="margin-top:auto;">← Назад</button>
+        </div>
+        <!-- Delivery app screen -->
+        <div id="delivery-app" class="phone-screen" style="display:none;">
+            <h3>ДОСТАВКА</h3>
+            <div id="orders-container" style="flex:1;width:100%;overflow-y:auto;margin-bottom:8px;"></div>
+            <button id="btn-collect-all" style="margin-top:auto;">Забрать всё</button>
+            <button class="phone-back" style="margin-top:4px;">← Назад</button>
+        </div>
+        <!-- Messages app screen -->
+        <div id="messages-app" class="phone-screen" style="display:none;">
+            <h3>MESSAGES</h3>
+            <div id="messages-container" style="flex:1;width:100%;overflow-y:auto;margin-bottom:8px;"></div>
+            <button class="phone-back" style="margin-top:auto;">← Назад</button>
+        </div>
+    </div>
+
+    <!-- Profile panel -->
+    <div id="profile-panel" class="panel modal" style="display:none;position:fixed;inset:0;z-index:120;justify-content:center;align-items:flex-start;background:rgba(0,0,0,.7);font-family:'Segoe UI',Arial,sans-serif;padding-top:10%;">
+        <div id="profile-content" style="background:#e0e0e0;border-radius:24px;width:85%;max-width:400px;max-height:85%;overflow-y:auto;padding:12px;position:relative;box-shadow:0 4px 12px rgba(0,0,0,.4);color:#2d2d2d;margin:auto;">
+            <!-- Header -->
+            <div style="display:flex;justify-content:center;align-items:center;margin-bottom:16px;">
+                <h2 style="margin:0;font-size:18px;font-weight:700;background:#ccc;color:#2d2d2d;padding:8px 16px;border-radius:8px;">ПРОФИЛЬ</h2>
+            </div>
+            
+            <!-- User Information Section -->
+            <div style="background:#5a5a5a;border-radius:20px;padding:16px;margin-bottom:20px;">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <div style="width:60px;height:60px;background:#ccc;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;color:#666;">👤</div>
+                    <div style="flex:1;">
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                            <h3 style="margin:0;font-size:16px;font-weight:700;color:#fff;">Казимир Куродойкин</h3>
+                            <button style="background:none;border:none;font-size:16px;cursor:pointer;color:#ccc;">✏️</button>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#ccc;">
+                            <span>ID 00000000</span>
+                            <button style="background:none;border:none;font-size:12px;cursor:pointer;color:#ccc;">📋</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Level Progress Section -->
+            <div style="background:#5a5a5a;border-radius:20px;padding:16px;margin-bottom:20px;box-shadow:0 2px 4px rgba(0,0,0,.1);">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                    <span style="font-size:14px;font-weight:600;color:#fff;">Уровень 5</span>
+                    <span style="font-size:12px;color:#ccc;">До следующего уровня: 40 XP</span>
+                </div>
+                <div style="height:8px;background:#2b2b2b;border-radius:4px;overflow:hidden;margin-bottom:12px;">
+                    <div class="level-progress" style="width:60px;height:60px;border-radius:50%;border:4px solid #fff;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;font-size:12px;font-weight:600;color:#fff;background:#333;"></div>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:12px;color:#ccc;">
+                    <span>160 XP</span>
+                    <span>200 XP</span>
+                </div>
+                <div class="level-text" style="font-size:20px;font-weight:700;color:#fff;">Уровень 5</div>
+            </div>
+            
+            <!-- Inventory Section -->
+            <div style="background:#5a5a5a;border:1px solid #555;border-radius:20px;padding:16px;margin-bottom:20px;position:relative;box-shadow:0 2px 4px rgba(0,0,0,.1);">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <span style="font-size:18px;font-weight:700;color:#fff;">Инвентарь</span>
+                    <button onclick="openInventory()" style="background:#e0e0e0;border:none;color:#2d2d2d;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:4px;padding:6px 12px;border-radius:6px;font-weight:600;">
+                        Перейти <span>→</span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Gift/Roulette Section -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
+                <div style="background:#5a5a5a;border-radius:20px;padding:16px;text-align:center;">
+                    <div style="font-size:14px;font-weight:600;color:#fff;">PNG gift</div>
+                </div>
+                <div style="background:#5a5a5a;border-radius:20px;padding:16px;text-align:center;color:#fff;">
+                    <div style="font-size:14px;font-weight:600;margin-bottom:4px;">Рулетка</div>
+                    <div style="font-size:12px;opacity:0.8;">В наличии: 2</div>
+                </div>
+            </div>
+
+            <!-- Close button with white background -->
+            <div style="text-align:center;padding:8px;background:#e0e0e0;border-radius:12px;width:60%;margin-left:auto;margin-right:auto;">
+                <button id="profile-close" style="background:none;border:none;color:#2d2d2d;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:6px;">
+                    <span style="font-size:16px;">←</span>
+                    Закрыть
+                </button>
+            </div>
+        </div>
+    </div>
+    <!-- /Profile panel -->
+
+    <!-- Inventory panel -->
+    <div id="inventory-panel" class="panel modal" style="display:none;position:fixed;inset:0;z-index:120;justify-content:center;align-items:flex-start;background:rgba(0,0,0,.7);font-family:'Segoe UI',Arial,sans-serif;padding-top:10%;">
+        <div id="inventory-content" style="background:#f0f0f0;border-radius:16px;width:90%;max-width:420px;max-height:90%;overflow-y:auto;padding:16px;position:relative;box-shadow:0 4px 12px rgba(0,0,0,.4);color:#333;margin:auto;">
+            <!-- Header -->
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                <button id="inventory-close" style="background:#e0e0e0;border:none;color:#333;font-size:14px;cursor:pointer;padding:6px 12px;border-radius:20px;font-weight:600;">✕ Закрыть</button>
+                <h2 style="margin:0;font-size:18px;font-weight:700;color:#333;">ИНВЕНТАРЬ</h2>
+                <div style="width:80px;"></div>
+            </div>
+
+            <!-- Tab Navigation -->
+            <div style="display:flex;background:#e0e0e0;border-radius:8px;padding:4px;margin-bottom:16px;">
+                <button id="tab-safes" class="inventory-tab active" style="flex:1;background:#fff;border:none;color:#333;padding:8px;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;">Сейфы</button>
+                <button id="tab-coins" class="inventory-tab" style="flex:1;background:none;border:none;color:#333;padding:8px;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;">Монеты</button>
+                <button id="tab-characters" class="inventory-tab" style="flex:1;background:none;border:none;color:#333;padding:8px;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;">Персонажи</button>
+            </div>
+
+            <!-- Inventory Items Grid -->
+            <div id="inventory-grid" style="display:grid;grid-template-columns:repeat(3, 1fr);gap:12px;margin-bottom:20px;align-items:start;">
+                <!-- Items will be populated dynamically -->
+            </div>
+
+            <!-- Back button -->
+            <div style="text-align:center;">
+                <button id="inventory-back" style="background:#424242;border:none;color:#fff;font-size:14px;font-weight:600;cursor:pointer;padding:10px 20px;border-radius:8px;display:flex;align-items:center;justify-content:center;gap:8px;margin:0 auto;">
+                    Назад <span>→</span>
+                </button>
+            </div>
+        </div>
+    </div>
+    <!-- /Inventory panel -->
+
+    <!-- Friends panel -->
+    <div id="friends-panel" class="panel modal" style="display:none;position:fixed;inset:0;z-index:120;justify-content:center;align-items:center;background:rgba(0,0,0,.7);">
+        <div id="friends-content" style="background:#e0e0e0;border-radius:24px;width:85%;max-width:400px;max-height:85%;overflow-y:auto;padding:12px;position:relative;box-shadow:0 4px 12px rgba(0,0,0,.4);color:#2d2d2d;">
+            
+            <!-- Темно-серый фон за контентом -->
+            <div style="background:#5a5a5a;border-radius:24px;padding:16px;margin-top:8px;">
+                <!-- Header -->
+                <div style="position:relative;text-align:center;margin-bottom:20px;">
+                    <h2 style="margin:0;font-size:18px;font-weight:700;color:#2d2d2d;background:#ccc;padding:8px 16px;border-radius:8px;display:inline-block;">ДРУЗЬЯ</h2>
+                    <button id="friends-close" style="position:absolute;top:0;right:0;background:#000;border:none;border-radius:50%;width:32px;height:32px;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+                </div>
+
+                <!-- Referral Link Section -->
+                <div style="background:#fff;border-radius:12px;padding:16px;margin-bottom:16px;">
+                    <p style="font-size:14px;margin:0 0 12px;color:#333;line-height:1.4;">
+                        Используй эту ссылку, чтобы пригласить друзей в дружную семью BOOKE и получай награды за каждого привлеченного друга, и даже за тех друзей, которых позовут привлеченные тобой друзья
+                    </p>
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        <input id="invite-link" readonly style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid #ccc;font-size:12px;background:#fff;color:#333;" value="https://t.me/EADemianets"/>
+                        <button id="btn-copy-link" style="background:#666;border:none;border-radius:8px;color:#fff;padding:8px;cursor:pointer;font-size:16px;">📋</button>
+                    </div>
+                </div>
+
+                <!-- Bonus Information Section -->
+                <div style="display:flex;gap:12px;margin-bottom:16px;">
+                    <div style="flex:1;background:#fff;border-radius:12px;padding:16px;text-align:center;">
+                        <div style="font-weight:700;font-size:24px;color:#000;margin-bottom:4px;">10 RBC</div>
+                        <div style="font-size:12px;color:#666;line-height:1.3;">за каждого приглашенного друга</div>
+                    </div>
+                    <div style="flex:1;background:#fff;border-radius:12px;padding:16px;text-align:center;">
+                        <div style="font-weight:700;font-size:24px;color:#000;margin-bottom:4px;">2 RBC</div>
+                        <div style="font-size:12px;color:#666;line-height:1.3;">за каждого друга ваших друзей</div>
+                    </div>
+                </div>
+
+                <!-- Get Reward Button -->
+                <button id="btn-collect-reward" style="width:100%;background:#000;border:none;border-radius:12px;color:#fff;padding:12px;margin-bottom:16px;font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:space-between;">
+                    <span>Получить награду</span>
+                    <div style="display:flex;align-items:center;gap:4px;">
+                        <span style="font-size:16px;">🎯</span>
+                        <span>+6</span>
+                    </div>
+                </button>
+
+                <!-- Friends List Section -->
+                <div style="background:#fff;border-radius:12px;padding:16px;">
+                    <h3 style="text-align:center;font-size:16px;margin:0 0 12px;color:#333;font-weight:700;">Ваши друзья (<span id="friends-count">5</span>)</h3>
+                    <div id="friends-list" style="display:flex;flex-direction:column;gap:8px;font-size:14px;color:#000;max-height:400px;overflow-y:auto;">
+                        <!-- Friend items will be populated dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Characters panel -->
+    <div id="characters-panel" class="panel modal" style="display:none;position:fixed;inset:0;z-index:120;justify-content:center;align-items:center;background:rgba(0,0,0,.7);font-family:'Segoe UI',Arial,sans-serif;">
+        <div id="characters-content" style="background:#e0e0e0;border-radius:24px;width:85%;max-width:400px;max-height:85%;overflow-y:auto;padding:12px;position:relative;box-shadow:0 4px 12px rgba(0,0,0,.4);color:#2d2d2d;">
+            <button id="chars-close" style="position:absolute;top:8px;right:8px;background:none;border:none;font-size:22px;cursor:pointer;color:#2d2d2d">&times;</button>
+            
+            <!-- Header -->
+            <div style="display:flex;justify-content:center;align-items:center;margin-bottom:16px;">
+                <h2 style="margin:0;font-size:18px;font-weight:700;background:#ccc;color:#2d2d2d;padding:8px 16px;border-radius:8px;">ПЕРСОНАЖИ</h2>
+            </div>
+            
+            <!-- Tab bar -->
+            <div style="display:flex;background:#fff;border-radius:8px;padding:4px;margin-bottom:16px;">
+                <button id="tab-all" class="char-tab active" style="flex:1;background:#e0e0e0;border:none;color:#000;padding:8px;border-radius:6px 0 0 6px;font-size:14px;font-weight:600;cursor:pointer;">Все</button>
+                <button id="tab-suitable" class="char-tab" style="flex:1;background:none;border:none;color:#000;padding:8px;border-radius:0 6px 6px 0;font-size:14px;font-weight:600;cursor:pointer;">Подходящие</button>
+            </div>
+            
+            <!-- Character cards -->
+            <div id="chars-list" style="display:flex;flex-direction:column;gap:12px;background:#5a5a5a;border-radius:20px;padding:16px;">
+                <!-- Блуми -->
+                <div style="background:#fff;border-radius:12px;padding:16px;display:flex;gap:12px;align-items:center;position:relative;box-shadow:0 2px 4px rgba(0,0,0,.1);">
+                    <div style="width:70px;height:70px;background:#ccc;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#666;position:absolute;left:-8px;top:50%;transform:translateY(-50%);">PNG-image</div>
+                    <div style="flex:1;margin-left:62px;">
+                        <h3 style="margin:0 0 8px;font-size:16px;font-weight:700;color:#2d2d2d;">Блуми</h3>
+                        <div style="display:flex;justify-content:space-between;font-size:14px;color:#666;margin-bottom:4px;">
+                            <span>Уровень</span>
+                            <span style="font-weight:600;color:#2d2d2d;">12</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;font-size:14px;color:#666;margin-bottom:4px;">
+                            <span>Навык</span>
+                            <span style="font-weight:600;color:#2d2d2d;">Бегущая почта</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;font-size:14px;color:#666;align-items:center;">
+                            <span>Редкость</span>
+                            <span style="color:#000;font-weight:600;">★☆☆☆☆</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Реджи -->
+                <div style="background:#fff;border-radius:12px;padding:16px;display:flex;gap:12px;align-items:center;position:relative;box-shadow:0 2px 4px rgba(0,0,0,.1);">
+                    <div style="width:70px;height:70px;background:#ccc;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#666;position:absolute;left:-8px;top:50%;transform:translateY(-50%);">PNG-image</div>
+                    <div style="flex:1;margin-left:62px;">
+                        <h3 style="margin:0 0 8px;font-size:16px;font-weight:700;color:#2d2d2d;">Реджи</h3>
+                        <div style="display:flex;justify-content:space-between;font-size:14px;color:#666;margin-bottom:4px;">
+                            <span>Уровень</span>
+                            <span style="font-weight:600;color:#2d2d2d;">1</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;font-size:14px;color:#666;margin-bottom:4px;">
+                            <span>Навык</span>
+                            <span style="font-weight:600;color:#2d2d2d;">Калькулятор</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;font-size:14px;color:#666;align-items:center;">
+                            <span>Редкость</span>
+                            <span style="color:#000;font-weight:600;">★☆☆☆☆</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Перпи -->
+                <div style="background:#fff;border-radius:12px;padding:16px;display:flex;gap:12px;align-items:center;position:relative;box-shadow:0 2px 4px rgba(0,0,0,.1);">
+                    <div style="width:70px;height:70px;background:#ccc;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#666;position:absolute;left:-8px;top:50%;transform:translateY(-50%);">PNG-image</div>
+                    <div style="flex:1;margin-left:62px;">
+                        <h3 style="margin:0 0 8px;font-size:16px;font-weight:700;color:#2d2d2d;">Перпи</h3>
+                        <div style="display:flex;justify-content:space-between;font-size:14px;color:#666;margin-bottom:4px;">
+                            <span>Уровень</span>
+                            <span style="font-weight:600;color:#2d2d2d;">5</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;font-size:14px;color:#666;margin-bottom:4px;">
+                            <span>Навык</span>
+                            <span style="font-weight:600;color:#2d2d2d;">Мастер-фломастер</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;font-size:14px;color:#666;align-items:center;">
+                            <span>Редкость</span>
+                            <span style="color:#000;font-weight:600;">★★★★☆</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- /Characters panel -->
+
+    <!-- Assignment overlay -->
+    <div id="assign-overlay" class="modal" style="display:none;position:fixed;inset:0;justify-content:center;align-items:center;background:rgba(0,0,0,.7);z-index:200;">
+        <div id="assign-grid" style="background:#000;border-radius:20px;padding:20px;width:280px;display:grid;grid-template-columns:1fr 1fr;gap:12px;position:relative;">
+            <!-- populated dynamically -->
+        </div>
+    </div>
+    <!-- /Assignment overlay -->
+
+    <!-- Tasks panel -->
+    <div id="tasks-panel" class="panel modal" style="display:none;position:fixed;inset:0;z-index:120;justify-content:center;align-items:center;background:rgba(0,0,0,.7);font-family:'Segoe UI',Arial,sans-serif;">
+        <div id="tasks-content" style="background:#e0e0e0;border-radius:24px;width:85%;max-width:400px;max-height:85%;overflow-y:auto;padding:12px;position:relative;box-shadow:0 4px 12px rgba(0,0,0,.4);color:#2d2d2d;">
+            <!-- Header -->
+            <div style="display:flex;justify-content:center;align-items:center;margin-bottom:16px;">
+                <h2 style="margin:0;font-size:18px;font-weight:700;background:#ccc;color:#2d2d2d;padding:8px 16px;border-radius:8px;">ЗАДАЧИ</h2>
+            </div>
+
+            <!-- Main content -->
+            <div style="text-align:center;margin-bottom:20px;">
+                <div style="background:#5a5a5a;color:#fff;padding:12px 16px;border-radius:20px;display:inline-block;">
+                    <h3 style="margin:0 0 4px;font-size:20px;font-weight:700;">Выполняйте задачи</h3>
+                    <p style="margin:0;font-size:14px;">и получайте в награду игровую валюту</p>
+                </div>
+            </div>
+
+            <!-- Tab bar -->
+            <div style="display:flex;background:#5a5a5a;border-radius:8px;padding:4px;margin-bottom:16px;">
+                <button id="tab-social" class="task-tab active" style="flex:1;background:#2d2d2d;border:none;color:#fff;padding:8px;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;">Соцсети</button>
+                <button id="tab-booke" class="task-tab" style="flex:1;background:none;border:none;color:#fff;padding:8px;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;">Booke</button>
+            </div>
+
+            <!-- Available tasks -->
+            <h4 style="margin:0 0 12px;font-size:16px;font-weight:700;color:#2d2d2d;">Доступные задания</h4>
+            <div id="tasks-list" style="display:flex;flex-direction:column;gap:8px;">
+                <!-- Task items will be populated dynamically -->
+            </div>
+
+            <!-- Back button with white background -->
+            <div style="text-align:center;margin-top:20px;padding:8px;background:#e0e0e0;border-radius:12px;width:60%;margin-left:auto;margin-right:auto;">
+                <button id="tasks-back" style="background:none;border:none;color:#2d2d2d;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:6px;">
+                    <span style="font-size:16px;">←</span>
+                    Закрыть
+                </button>
+            </div>
+        </div>
+    </div>
+    <!-- /Tasks panel -->
+
+    <!-- Game Tasks panel (new) -->
+    <div id="game-tasks-panel" class="panel modal" style="display:none;position:fixed;inset:0;z-index:120;justify-content:center;align-items:center;background:rgba(0,0,0,.7);font-family:'Segoe UI',Arial,sans-serif;">
+        <div id="game-tasks-content" style="background:#e0e0e0;border-radius:24px;width:85%;max-width:400px;max-height:85%;overflow-y:auto;padding:12px;position:relative;box-shadow:0 4px 12px rgba(0,0,0,.4);color:#2d2d2d;">
+            <!-- Header -->
+            <div style="position:relative;text-align:center;margin-bottom:20px;">
+                <h2 style="margin:0;font-size:18px;font-weight:700;color:#2d2d2d;background:#ccc;padding:8px 16px;border-radius:8px;display:inline-block;">ЗАДАНИЯ</h2>
+                <button id="game-tasks-close" style="position:absolute;top:0;right:0;background:#000;border:none;border-radius:50%;width:32px;height:32px;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+            </div>
+
+            <!-- Main content -->
+            <div style="text-align:center;margin-bottom:20px;">
+                <div style="background:#5a5a5a;color:#fff;padding:12px 16px;border-radius:20px;display:inline-block;">
+                    <h3 style="margin:0 0 4px;font-size:20px;font-weight:700;">Доступные задания</h3>
+                    <p style="margin:0;font-size:14px;">Выполняйте задания, чтобы получить в награду игровую валюту и уникальные объекты</p>
+                </div>
+            </div>
+
+            <!-- Summary Cards -->
+            <div style="display:flex;gap:12px;margin-bottom:20px;">
+                <div style="flex:1;background:#5a5a5a;border-radius:16px;padding:16px;text-align:center;">
+                    <div style="font-size:12px;color:#ccc;margin-bottom:4px;">Заданий выполнено</div>
+                    <div style="font-size:32px;font-weight:700;color:#fff;">3</div>
+                </div>
+                <div style="flex:1;background:#5a5a5a;border-radius:16px;padding:16px;text-align:center;">
+                    <div style="font-size:12px;color:#ccc;margin-bottom:4px;">Заданий доступно</div>
+                    <div style="font-size:32px;font-weight:700;color:#fff;">7</div>
+                </div>
+            </div>
+
+            <!-- Get All Rewards Button -->
+            <button id="btn-get-all-rewards" style="width:100%;background:#333;border:none;border-radius:12px;color:#fff;padding:12px;margin-bottom:20px;font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:space-between;">
+                <span>Получить все награды</span>
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <span>+35k</span>
+                    <span>+100</span>
+                    <span>+2</span>
+                </div>
+            </button>
+
+            <!-- Available Tasks Section -->
+            <div style="background:#5a5a5a;border-radius:20px;padding:16px;">
+                <h3 style="text-align:center;font-size:16px;margin:0 0 16px;color:#fff;font-weight:700;">Доступные задания</h3>
+                <div id="game-tasks-list" style="display:flex;flex-direction:column;gap:8px;">
+                    <!-- Task items will be populated dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- /Game Tasks panel -->
+
+    <!-- Statistics panel -->
+    <div id="statistics-panel" class="panel modal" style="display:none;position:fixed;inset:0;z-index:120;justify-content:center;align-items:center;background:rgba(0,0,0,.7);font-family:'Segoe UI',Arial,sans-serif;">
+        <div id="statistics-content" style="background:#e0e0e0;border-radius:24px;width:85%;max-width:400px;max-height:85%;overflow-y:auto;padding:12px;position:relative;box-shadow:0 4px 12px rgba(0,0,0,.4);color:#2d2d2d;">
+            <!-- Header -->
+            <div style="position:relative;text-align:center;margin-bottom:20px;">
+                <button id="statistics-close" style="position:absolute;top:0;left:0;background:#333;border:none;border-radius:8px;color:#fff;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;">✕ Закрыть</button>
+                <h2 style="margin:0;font-size:18px;font-weight:700;color:#2d2d2d;background:#ccc;padding:8px 16px;border-radius:8px;display:inline-block;">СТАТИСТИКА</h2>
+                <div style="position:absolute;top:0;right:0;display:flex;gap:8px;">
+                    <button style="background:none;border:none;color:#666;font-size:16px;cursor:pointer;">⌄</button>
+                    <button style="background:none;border:none;color:#666;font-size:16px;cursor:pointer;">⋯</button>
+                </div>
+            </div>
+
+            <!-- Main Statistics Cards -->
+            <div style="display:flex;gap:12px;margin-bottom:20px;">
+                <!-- Level Card -->
+                <div style="flex:1;background:#5a5a5a;border-radius:16px;padding:16px;text-align:center;position:relative;">
+                    <div style="font-size:12px;color:#ccc;margin-bottom:8px;">Уровень</div>
+                    <div class="level-progress" style="width:60px;height:60px;border-radius:50%;border:4px solid #fff;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;font-size:12px;font-weight:600;color:#fff;background:#333;"></div>
+                    <div class="level-text" style="font-size:20px;font-weight:700;color:#fff;">Уровень 5</div>
+                </div>
+                
+                <!-- Balance Cards -->
+                <div style="flex:1;display:flex;flex-direction:column;gap:8px;">
+                    <div style="background:#5a5a5a;border-radius:12px;padding:12px;text-align:center;">
+                        <div style="font-size:10px;color:#ccc;margin-bottom:4px;">Почасовой баланс</div>
+                        <div class="hourly-balance" style="font-size:16px;font-weight:700;color:#fff;">👁️ 30 152</div>
+                    </div>
+                    <div style="background:#5a5a5a;border-radius:12px;padding:12px;text-align:center;">
+                        <div style="font-size:10px;color:#ccc;margin-bottom:4px;">Ежедневный баланс</div>
+                        <div class="daily-balance" style="font-size:16px;font-weight:700;color:#fff;">👁️ 723 648</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detailed Statistics Section -->
+            <div style="background:#5a5a5a;border-radius:20px;padding:16px;margin-bottom:20px;">
+                <h3 style="text-align:center;font-size:16px;margin:0 0 16px;color:#fff;font-weight:700;">Подробная статистика по направлениям</h3>
+                
+                <!-- Total Daily Income -->
+                <div class="total-income" style="background:#424242;border-radius:12px;padding:12px;margin-bottom:16px;text-align:center;">
+                    <div style="font-size:12px;color:#ccc;margin-bottom:4px;">Суммарный ежедневный доход</div>
+                    <div style="font-size:20px;font-weight:700;color:#fff;">👁️ 1 000 000</div>
+                </div>
+
+                <!-- Income Breakdown Chart -->
+                <div class="chart-container" style="display:flex;justify-content:space-between;align-items:end;height:140px;margin-bottom:16px;padding:0 4px;">
+                    <div style="display:flex;flex-direction:column;align-items:center;flex:1;margin:0 2px;">
+                        <div style="background:#fff;width:100%;max-width:45px;height:56px;border-radius:3px;margin-bottom:8px;"></div>
+                        <div style="font-size:10px;color:#ccc;text-align:center;line-height:1.2;margin-bottom:2px;height:24px;display:flex;align-items:center;justify-content:center;">Библиотека</div>
+                        <div style="font-size:10px;color:#fff;text-align:center;line-height:1.2;height:24px;display:flex;align-items:center;justify-content:center;">105к/день</div>
+                    </div>
+                    <div style="display:flex;flex-direction:column;align-items:center;flex:1;margin:0 2px;">
+                        <div style="background:#fff;width:100%;max-width:45px;height:77px;border-radius:3px;margin-bottom:8px;"></div>
+                        <div style="font-size:10px;color:#ccc;text-align:center;line-height:1.2;margin-bottom:2px;height:24px;display:flex;align-items:center;justify-content:center;">Завод</div>
+                        <div style="font-size:10px;color:#fff;text-align:center;line-height:1.2;height:24px;display:flex;align-items:center;justify-content:center;">205k/день</div>
+                    </div>
+                    <div style="display:flex;flex-direction:column;align-items:center;flex:1;margin:0 2px;">
+                        <div style="background:#fff;width:100%;max-width:45px;height:49px;border-radius:3px;margin-bottom:8px;"></div>
+                        <div style="font-size:10px;color:#ccc;text-align:center;line-height:1.2;margin-bottom:2px;height:24px;display:flex;align-items:center;justify-content:center;">Почта</div>
+                        <div style="font-size:10px;color:#fff;text-align:center;line-height:1.2;height:24px;display:flex;align-items:center;justify-content:center;">135k/день</div>
+                    </div>
+                    <div style="display:flex;flex-direction:column;align-items:center;flex:1;margin:0 2px;">
+                        <div style="background:#fff;width:100%;max-width:45px;height:84px;border-radius:3px;margin-bottom:8px;"></div>
+                        <div style="font-size:10px;color:#ccc;text-align:center;line-height:1.2;margin-bottom:2px;height:24px;display:flex;align-items:center;justify-content:center;">Статуя</div>
+                        <div style="font-size:10px;color:#fff;text-align:center;line-height:1.2;height:24px;display:flex;align-items:center;justify-content:center;">225к/день</div>
+                    </div>
+                </div>
+
+                <!-- Category Buttons -->
+                <div style="display:flex;gap:8px;">
+                    <button class="stat-category-btn active" style="flex:1;background:#666;border:none;border-radius:8px;color:#fff;padding:8px;font-size:12px;font-weight:600;cursor:pointer;">Доходы</button>
+                    <button class="stat-category-btn" style="flex:1;background:#424242;border:none;border-radius:8px;color:#fff;padding:8px;font-size:12px;font-weight:600;cursor:pointer;">Расходы</button>
+                    <button class="stat-category-btn" style="flex:1;background:#424242;border:none;border-radius:8px;color:#fff;padding:8px;font-size:12px;font-weight:600;cursor:pointer;">Баланс</button>
+                </div>
+            </div>
+
+            <!-- Employees Section -->
+            <div style="background:#5a5a5a;border-radius:20px;padding:16px;">
+                <h3 style="text-align:center;font-size:16px;margin:0 0 16px;color:#fff;font-weight:700;">Сотрудники</h3>
+                
+                <!-- Employee Navigation -->
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                    <button style="background:none;border:none;color:#fff;font-size:16px;cursor:pointer;">←</button>
+                    <div style="display:flex;align-items:center;gap:4px;font-size:12px;color:#ccc;">
+                        <span>👤</span>
+                        <span>3/8</span>
+                    </div>
+                    <button style="background:none;border:none;color:#fff;font-size:16px;cursor:pointer;">→</button>
+                </div>
+
+                <!-- Employee Cards Placeholder -->
+                <div style="display:flex;gap:8px;margin-bottom:16px;">
+                    <div style="width:60px;height:80px;background:#424242;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#ccc;">👤</div>
+                    <div style="width:60px;height:80px;background:#424242;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#ccc;">👤</div>
+                    <div style="width:60px;height:80px;background:#424242;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#ccc;">👤</div>
+                </div>
+
+                <!-- Back Button -->
+                <div style="text-align:center;">
+                    <button style="background:#333;border:none;border-radius:12px;color:#fff;padding:12px;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin:0 auto;">
+                        <span>⟳</span>
+                        Назад
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- /Statistics panel -->
+
+    <!-- Level-up overlay -->
+    <div id="levelup-overlay" style="display:none;position:fixed;inset:0;justify-content:center;align-items:center;z-index:200;pointer-events:none;">
+        <div id="levelup-badge" style="display:flex;flex-direction:column;align-items:center;gap:4px;background:#4caf50;border-radius:50%;width:120px;height:120px;color:#fff;font-weight:700;font-size:32px;justify-content:center;transform:scale(0);"></div>
+    </div>
+    <!-- Storage upgrade panel -->
+    <div id="storage-upgrade-panel" class="panel modal" style="z-index:20;display:none;left:0;right:0;top:15%;margin:auto;width:90%;max-width:360px;background:#333;color:#fff;border-radius:10px;padding:12px;box-shadow:0 4px 12px rgba(0,0,0,.4)">
+        <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #555;padding-bottom:6px;margin-bottom:6px">
+            <div style="display:flex;align-items:center;gap:6px"><i class="fa-solid fa-warehouse"></i><span>Хранилище</span></div>
+            <button id="storage-panel-close" style="background:none;border:none;color:#fff;font-size:20px"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div id="storage-panel-content" style="font-size:14px;display:flex;flex-direction:column;gap:8px;">
+            <!-- new storage card design -->
+            <div id="storage-card" style="display:flex;flex-direction:column;gap:4px;background:linear-gradient(180deg,#0d47a1,#1976d2);border-radius:14px;padding:14px;color:#fff;position:relative;overflow:hidden;">
+                <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:700;opacity:.9;">
+                    <span>Хранилище</span>
+                    <img src="assets/png/safe.png" alt="safe" style="width:38px;height:38px;object-fit:contain;">
+                </div>
+                <div id="storage-card-percent" style="font-size:32px;font-weight:700;line-height:1">0%</div>
+                <div id="storage-card-amt" style="font-size:12px;opacity:.8">0 / 0</div>
+            </div>
+            <!-- /storage card -->
+
+            <!-- старый блок вместимости оставляем для апгрейдов -->
+            <div id="storage-capacity" style="background:#424242;border-radius:8px;padding:8px;text-align:center;">
+                <div id="storage-progress-text" style="font-size:24px;font-weight:700;color:#8bc34a">0%</div>
+                <div style="height:6px;background:#2b2b2b;border-radius:3px;overflow:hidden;margin:4px 0;">
+                    <div id="storage-progress-bar" style="height:100%;width:0;background:#8bc34a;"></div>
+                </div>
+                <div id="storage-amount" style="font-size:12px;opacity:.8">0/1000</div>
+            </div>
+            <button id="storage-upgrade-btn" style="width:100%;background:#4caf50;border:none;border-radius:6px;color:#fff;padding:8px;font-size:16px;cursor:pointer">Улучшить <span id="storage-upgrade-cost">1000</span> <i class="fa-solid fa-money-bill"></i></button>
+        </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="js/iconReplace.js"></script>
+    <script src="js/main.js"></script>
+    <script src="js/referral.js"></script>
+    <script src="js/map_ui.js"></script>
+    <script src="js/game-tasks.js"></script>
+    <script src="js/tasks-swap.js"></script>
+    <script src="js/statistics.js"></script>
+</body>
+</html> 

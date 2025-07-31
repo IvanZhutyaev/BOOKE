@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест сейфов</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        .test-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .balance-info {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Тест покупки сейфов</h1>
+        
+        <div class="balance-info">
+            <h3>Текущий баланс:</h3>
+            <p>Деньги: <span id="money-balance">100</span>$</p>
+            <p>RBC: <span id="rbc-balance">0</span></p>
+        </div>
+        
+        <h3>Тестирование сейфов:</h3>
+        <button class="test-button" onclick="testSafe('free')">Обычный сейф (бесплатный)</button>
+        <button class="test-button" onclick="testSafe('gold')">Золотой сейф (30 RBC)</button>
+        <button class="test-button" onclick="testSafe('mystic')">Мистический сейф (150 RBC)</button>
+        <button class="test-button" onclick="testSafe('legendary')">Легендарный сейф (500 RBC)</button>
+        <button class="test-button" onclick="testSafe('divine')">Божественный сейф (1000 RBC)</button>
+        
+        <h3>Добавить RBC для тестирования:</h3>
+        <button class="test-button" onclick="addRBC(100)">+100 RBC</button>
+        <button class="test-button" onclick="addRBC(500)">+500 RBC</button>
+        <button class="test-button" onclick="addRBC(1000)">+1000 RBC</button>
+        
+        <h3>Сбросить баланс:</h3>
+        <button class="test-button" onclick="resetBalance()" style="background: #dc3545;">Сбросить</button>
+    </div>
+
+    <!-- Оверлей для уведомлений -->
+    <div id="crate-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:1000;justify-content:center;align-items:center;"></div>
+
+    <script>
+        // Импортируем функции из основного файла
+        function getBalance() {
+            return parseFloat(localStorage.getItem('balance') || '100');
+        }
+        
+        function setBalance(v) {
+            localStorage.setItem('balance', v);
+            document.getElementById('money-balance').textContent = v.toLocaleString();
+        }
+        
+        function getCredits() {
+            return parseInt(localStorage.getItem('credits') || '0');
+        }
+        
+        function setCredits(v) {
+            localStorage.setItem('credits', v);
+            document.getElementById('rbc-balance').textContent = v;
+        }
+        
+        function addXP(amount) {
+            console.log(`+${amount} XP получено`);
+        }
+        
+        function formatNumber(value) {
+            return value.toLocaleString();
+        }
+        
+        // Конфигурация сейфов
+        const crates = {
+            free: {cost: 0, lvlReq: 4, money: [50, 120], credits: [0, 0]},
+            gold: {cost: 30, lvlReq: 0, money: [400, 800], credits: [2, 5]},
+            mystic: {cost: 150, lvlReq: 0, money: [1500, 3000], credits: [8, 15]},
+            legendary: {cost: 500, lvlReq: 0, money: [5000, 10000], credits: [25, 50]},
+            divine: {cost: 1000, lvlReq: 0, money: [15000, 30000], credits: [75, 150]}
+        };
+        
+        function randRange(arr) {
+            const [min, max] = arr;
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+        
+        function openCrate(type) {
+            const cfg = crates[type];
+            if (!cfg) {
+                alert('Неизвестный тип сейфа');
+                return;
+            }
+            
+            if (cfg.lvlReq > 0 && 0 < cfg.lvlReq) {
+                alert(`Требуется уровень ${cfg.lvlReq}`);
+                return;
+            }
+            
+            if (cfg.cost > 0 && getCredits() < cfg.cost) {
+                alert('Недостаточно RBC');
+                return;
+            }
+            
+            // Списываем стоимость
+            if (cfg.cost > 0) {
+                setCredits(getCredits() - cfg.cost);
+            }
+            
+            const moneyReward = randRange(cfg.money);
+            const creditReward = randRange(cfg.credits);
+            
+            setBalance(getBalance() + moneyReward);
+            if (creditReward > 0) setCredits(getCredits() + creditReward);
+            
+            // Начисляем XP
+            addXP(10);
+            
+            // Показываем уведомление
+            showPurchaseNotification('Сейф открыт!', {
+                money: moneyReward,
+                credits: creditReward,
+                xp: 10
+            }, 'safes');
+            
+            updateBalanceDisplay();
+        }
+        
+        function showPurchaseNotification(title, rewards, itemType = 'safes') {
+            const overlay = document.getElementById('crate-overlay');
+            
+            // Определяем иконку в зависимости от типа товара
+            let iconSrc = 'assets/icons/money.png';
+            let bgColor = '#2d6a4f';
+            let borderColor = '#1b4332';
+            
+            switch(itemType) {
+                case 'safes':
+                    iconSrc = 'assets/icons/safe.png';
+                    bgColor = '#424242';
+                    borderColor = '#2d2d2d';
+                    break;
+                case 'coins':
+                    iconSrc = 'assets/icons/coin.png';
+                    bgColor = '#b8860b';
+                    borderColor = '#8b6914';
+                    break;
+                case 'sets':
+                    iconSrc = 'assets/icons/gift.png';
+                    bgColor = '#8e24aa';
+                    borderColor = '#6a1b9a';
+                    break;
+                default:
+                    iconSrc = 'assets/icons/check.png';
+                    bgColor = '#2d6a4f';
+                    borderColor = '#1b4332';
+            }
+            
+            // Создаем HTML для наград
+            let rewardsHTML = '';
+            if (rewards.money) {
+                rewardsHTML += `<div style="display:flex;align-items:center;gap:8px;margin:8px 0;padding:8px 12px;background:rgba(255,255,255,0.1);border-radius:8px;border:1px solid rgba(255,255,255,0.2);">
+                    <div style="width:24px;height:24px;background:#ccc;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#666;">PNG</div>
+                    <span style="font-size:18px;font-weight:600;color:#fff;">+${formatNumber(rewards.money)}$</span>
+                </div>`;
+            }
+            if (rewards.credits) {
+                rewardsHTML += `<div style="display:flex;align-items:center;gap:8px;margin:8px 0;padding:8px 12px;background:rgba(255,255,255,0.1);border-radius:8px;border:1px solid rgba(255,255,255,0.2);">
+                    <div style="width:24px;height:24px;background:#ccc;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#666;">PNG</div>
+                    <span style="font-size:18px;font-weight:600;color:#fff;">+${rewards.credits}</span>
+                </div>`;
+            }
+            if (rewards.xp) {
+                rewardsHTML += `<div style="display:flex;align-items:center;gap:8px;margin:8px 0;padding:8px 12px;background:rgba(255,255,255,0.1);border-radius:8px;border:1px solid rgba(255,255,255,0.2);">
+                    <div style="width:24px;height:24px;background:#ccc;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#666;">PNG</div>
+                    <span style="font-size:18px;font-weight:600;color:#fff;">+${rewards.xp} XP</span>
+                </div>`;
+            }
+            
+            overlay.innerHTML = `
+                <div style="
+                    background: linear-gradient(135deg, ${bgColor} 0%, ${borderColor} 100%);
+                    padding: 24px 28px;
+                    border-radius: 16px;
+                    text-align: center;
+                    animation: purchasePop 0.5s ease-out;
+                    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+                    border: 2px solid rgba(255,255,255,0.1);
+                    max-width: 320px;
+                    width: 90%;
+                    position: relative;
+                    overflow: hidden;
+                ">
+                    <!-- Декоративные элементы -->
+                    <div style="position:absolute;top:-20px;right:-20px;width:60px;height:60px;background:rgba(255,255,255,0.1);border-radius:50%;"></div>
+                    <div style="position:absolute;bottom:-30px;left:-30px;width:80px;height:80px;background:rgba(255,255,255,0.05);border-radius:50%;"></div>
+                    
+                    <!-- Иконка -->
+                    <div style="width:64px;height:64px;background:#ccc;border-radius:12px;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#666;filter:drop-shadow(0 4px 8px rgba(0,0,0,0.3));">
+                        PNG-image
+                    </div>
+                    
+                    <!-- Заголовок -->
+                    <h3 style="margin:0 0 20px;font-size:24px;font-weight:700;color:#fff;text-shadow:0 2px 4px rgba(0,0,0,0.3);">
+                        ${title}
+                    </h3>
+                    
+                    <!-- Награды -->
+                    <div style="margin-bottom:24px;">
+                        ${rewardsHTML}
+                    </div>
+                    
+                    <!-- Кнопка -->
+                    <button id="purchase-ok" style="
+                        background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+                        border: none;
+                        border-radius: 12px;
+                        color: #fff;
+                        font-size: 16px;
+                        font-weight: 600;
+                        padding: 12px 32px;
+                        cursor: pointer;
+                        transition: all 0.2s ease;
+                        box-shadow: 0 4px 12px rgba(76,175,80,0.3);
+                        text-transform: uppercase;
+                        letter-spacing: 0.5px;
+                    " onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 16px rgba(76,175,80,0.4)'" 
+                       onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 12px rgba(76,175,80,0.3)'">
+                        Отлично!
+                    </button>
+                </div>
+            `;
+            
+            overlay.style.display = 'flex';
+            overlay.querySelector('#purchase-ok').onclick = () => {
+                overlay.style.display = 'none';
+            };
+        }
+        
+        // Добавляем CSS анимацию
+        const stylePurchasePop = document.createElement('style');
+        stylePurchasePop.textContent = `
+        @keyframes purchasePop {
+            0% {
+                transform: scale(0.3) rotate(-10deg);
+                opacity: 0;
+            }
+            50% {
+                transform: scale(1.05) rotate(2deg);
+            }
+            100% {
+                transform: scale(1) rotate(0deg);
+                opacity: 1;
+            }
+        }
+        `;
+        document.head.appendChild(stylePurchasePop);
+        
+        // Функции для тестирования
+        function testSafe(type) {
+            console.log(`Тестируем сейф типа: ${type}`);
+            openCrate(type);
+        }
+        
+        function addRBC(amount) {
+            setCredits(getCredits() + amount);
+            updateBalanceDisplay();
+        }
+        
+        function resetBalance() {
+            setBalance(100);
+            setCredits(0);
+            updateBalanceDisplay();
+        }
+        
+        function updateBalanceDisplay() {
+            document.getElementById('money-balance').textContent = getBalance().toLocaleString();
+            document.getElementById('rbc-balance').textContent = getCredits();
+        }
+        
+        // Инициализация
+        updateBalanceDisplay();
+    </script>
+</body>
+</html> 

@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест уведомлений о покупках</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+        }
+        .test-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2d6a4f;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .test-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .test-btn {
+            background: linear-gradient(135deg, #2d6a4f 0%, #1b4332 100%);
+            color: white;
+            border: none;
+            padding: 15px 20px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(45,106,79,0.3);
+        }
+        .test-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(45,106,79,0.4);
+        }
+        .description {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            border-left: 4px solid #2d6a4f;
+        }
+        .description h3 {
+            color: #2d6a4f;
+            margin-top: 0;
+        }
+        .description ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .description li {
+            margin: 5px 0;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🎮 Тест новых уведомлений о покупках</h1>
+        
+        <div class="description">
+            <h3>✨ Что изменилось:</h3>
+            <ul>
+                <li><strong>Новый дизайн:</strong> Современные уведомления с градиентами и анимациями</li>
+                <li><strong>Типизированные уведомления:</strong> Разные стили для сейфов, монет и наборов</li>
+                <li><strong>Универсальная система:</strong> Одна функция для всех типов покупок</li>
+                <li><strong>Адаптивность:</strong> Красиво выглядит на всех устройствах</li>
+                <li><strong>Интерактивность:</strong> Hover-эффекты и плавные переходы</li>
+            </ul>
+        </div>
+
+        <div class="test-buttons">
+            <button class="test-btn" onclick="testSafePurchase()">🔒 Тест покупки сейфа</button>
+            <button class="test-btn" onclick="testCoinPurchase()">🪙 Тест покупки монет</button>
+            <button class="test-btn" onclick="testSetPurchase()">🎁 Тест покупки набора</button>
+            <button class="test-btn" onclick="testReward()">🎉 Тест награды</button>
+        </div>
+
+        <div class="description">
+            <h3>🔧 Как использовать:</h3>
+            <ul>
+                <li><code>showPurchaseNotification(title, rewards, itemType)</code> - для покупок в магазине</li>
+                <li><code>showRewardNotification(title, rewards)</code> - для общих наград</li>
+                <li>Поддерживаемые типы: 'safes', 'coins', 'sets'</li>
+                <li>Поддерживаемые награды: money, credits, xp</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Оверлей для уведомлений -->
+    <div id="crate-overlay" style="position:fixed;top:0;left:0;width:100%;height:100%;display:none;align-items:center;justify-content:center;z-index:40;background:rgba(0,0,0,0.5);"></div>
+
+    <script>
+        // Импортируем функции из основного файла
+        function formatNumber(value) {
+            if (value >= 1000000) {
+                return (value / 1000000).toFixed(1) + 'M';
+            } else if (value >= 1000) {
+                return (value / 1000).toFixed(1) + 'k';
+            }
+            return value.toString();
+        }
+
+        // Функция для показа уведомлений о покупках
+        function showPurchaseNotification(title, rewards, itemType = 'safes') {
+            const overlay = document.getElementById('crate-overlay');
+            
+            // Определяем иконку в зависимости от типа товара
+            let iconSrc = 'assets/icons/money.png';
+            let bgColor = '#2d6a4f';
+            let borderColor = '#1b4332';
+            
+            switch(itemType) {
+                case 'safes':
+                    iconSrc = 'assets/icons/safe.png';
+                    bgColor = '#424242';
+                    borderColor = '#2d2d2d';
+                    break;
+                case 'coins':
+                    iconSrc = 'assets/icons/coin.png';
+                    bgColor = '#b8860b';
+                    borderColor = '#8b6914';
+                    break;
+                case 'sets':
+                    iconSrc = 'assets/icons/gift.png';
+                    bgColor = '#8e24aa';
+                    borderColor = '#6a1b9a';
+                    break;
+                default:
+                    iconSrc = 'assets/icons/check.png';
+                    bgColor = '#2d6a4f';
+                    borderColor = '#1b4332';
+            }
+            
+            // Создаем HTML для наград
+            let rewardsHTML = '';
+            if (rewards.money) {
+                rewardsHTML += `<div style="display:flex;align-items:center;gap:8px;margin:8px 0;padding:8px 12px;background:rgba(255,255,255,0.1);border-radius:8px;border:1px solid rgba(255,255,255,0.2);">
+                    <div style="width:24px;height:24px;background:#ccc;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#666;">PNG</div>
+                    <span style="font-size:18px;font-weight:600;color:#fff;">+${formatNumber(rewards.money)}$</span>
+                </div>`;
+            }
+            if (rewards.credits) {
+                rewardsHTML += `<div style="display:flex;align-items:center;gap:8px;margin:8px 0;padding:8px 12px;background:rgba(255,255,255,0.1);border-radius:8px;border:1px solid rgba(255,255,255,0.2);">
+                    <div style="width:24px;height:24px;background:#ccc;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#666;">PNG</div>
+                    <span style="font-size:18px;font-weight:600;color:#fff;">+${rewards.credits}</span>
+                </div>`;
+            }
+            if (rewards.xp) {
+                rewardsHTML += `<div style="display:flex;align-items:center;gap:8px;margin:8px 0;padding:8px 12px;background:rgba(255,255,255,0.1);border-radius:8px;border:1px solid rgba(255,255,255,0.2);">
+                    <div style="width:24px;height:24px;background:#ccc;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#666;">PNG</div>
+                    <span style="font-size:18px;font-weight:600;color:#fff;">+${rewards.xp} XP</span>
+                </div>`;
+            }
+            
+            overlay.innerHTML = `
+                <div style="
+                    background: linear-gradient(135deg, ${bgColor} 0%, ${borderColor} 100%);
+                    padding: 24px 28px;
+                    border-radius: 16px;
+                    text-align: center;
+                    animation: purchasePop 0.5s ease-out;
+                    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+                    border: 2px solid rgba(255,255,255,0.1);
+                    max-width: 320px;
+                    width: 90%;
+                    position: relative;
+                    overflow: hidden;
+                ">
+                    <!-- Декоративные элементы -->
+                    <div style="position:absolute;top:-20px;right:-20px;width:60px;height:60px;background:rgba(255,255,255,0.1);border-radius:50%;"></div>
+                    <div style="position:absolute;bottom:-30px;left:-30px;width:80px;height:80px;background:rgba(255,255,255,0.05);border-radius:50%;"></div>
+                    
+                    <!-- Иконка -->
+                    <div style="width:64px;height:64px;background:#ccc;border-radius:12px;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#666;filter:drop-shadow(0 4px 8px rgba(0,0,0,0.3));">
+                        PNG-image
+                    </div>
+                    
+                    <!-- Заголовок -->
+                    <h3 style="margin:0 0 20px;font-size:24px;font-weight:700;color:#fff;text-shadow:0 2px 4px rgba(0,0,0,0.3);">
+                        ${title}
+                    </h3>
+                    
+                    <!-- Награды -->
+                    <div style="margin-bottom:24px;">
+                        ${rewardsHTML}
+                    </div>
+                    
+                    <!-- Кнопка -->
+                    <button id="purchase-ok" style="
+                        background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+                        border: none;
+                        border-radius: 12px;
+                        color: #fff;
+                        font-size: 16px;
+                        font-weight: 600;
+                        padding: 12px 32px;
+                        cursor: pointer;
+                        transition: all 0.2s ease;
+                        box-shadow: 0 4px 12px rgba(76,175,80,0.3);
+                        text-transform: uppercase;
+                        letter-spacing: 0.5px;
+                    " onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 16px rgba(76,175,80,0.4)'" 
+                       onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 12px rgba(76,175,80,0.3)'">
+                        Отлично!
+                    </button>
+                </div>
+            `;
+            
+            overlay.style.display = 'flex';
+            overlay.querySelector('#purchase-ok').onclick = () => {
+                overlay.style.display = 'none';
+            };
+        }
+
+        // Функция для показа общих наград
+        function showRewardNotification(title, rewards) {
+            const overlay = document.getElementById('crate-overlay');
+            
+            // Создаем HTML для наград
+            let rewardsHTML = '';
+            if (rewards.money) {
+                rewardsHTML += `<div style="display:flex;align-items:center;gap:8px;margin:8px 0;padding:8px 12px;background:rgba(255,255,255,0.1);border-radius:8px;border:1px solid rgba(255,255,255,0.2);">
+                    <div style="width:24px;height:24px;background:#ccc;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#666;">PNG</div>
+                    <span style="font-size:18px;font-weight:600;color:#fff;">+${formatNumber(rewards.money)}$</span>
+                </div>`;
+            }
+            if (rewards.credits) {
+                rewardsHTML += `<div style="display:flex;align-items:center;gap:8px;margin:8px 0;padding:8px 12px;background:rgba(255,255,255,0.1);border-radius:8px;border:1px solid rgba(255,255,255,0.2);">
+                    <div style="width:24px;height:24px;background:#ccc;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#666;">PNG</div>
+                    <span style="font-size:18px;font-weight:600;color:#fff;">+${rewards.credits}</span>
+                </div>`;
+            }
+            if (rewards.xp) {
+                rewardsHTML += `<div style="display:flex;align-items:center;gap:8px;margin:8px 0;padding:8px 12px;background:rgba(255,255,255,0.1);border-radius:8px;border:1px solid rgba(255,255,255,0.2);">
+                    <div style="width:24px;height:24px;background:#ccc;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#666;">PNG</div>
+                    <span style="font-size:18px;font-weight:600;color:#fff;">+${rewards.xp} XP</span>
+                </div>`;
+            }
+            
+            overlay.innerHTML = `
+                <div style="
+                    background: linear-gradient(135deg, #2d6a4f 0%, #1b4332 100%);
+                    padding: 24px 28px;
+                    border-radius: 16px;
+                    text-align: center;
+                    animation: purchasePop 0.5s ease-out;
+                    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+                    border: 2px solid rgba(255,255,255,0.1);
+                    max-width: 320px;
+                    width: 90%;
+                    position: relative;
+                    overflow: hidden;
+                ">
+                    <!-- Декоративные элементы -->
+                    <div style="position:absolute;top:-20px;right:-20px;width:60px;height:60px;background:rgba(255,255,255,0.1);border-radius:50%;"></div>
+                    <div style="position:absolute;bottom:-30px;left:-30px;width:80px;height:80px;background:rgba(255,255,255,0.05);border-radius:50%;"></div>
+                    
+                    <!-- Иконка -->
+                    <div style="width:64px;height:64px;background:#ccc;border-radius:12px;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#666;filter:drop-shadow(0 4px 8px rgba(0,0,0,0.3));">
+                        PNG-image
+                    </div>
+                    
+                    <!-- Заголовок -->
+                    <h3 style="margin:0 0 20px;font-size:24px;font-weight:700;color:#fff;text-shadow:0 2px 4px rgba(0,0,0,0.3);">
+                        ${title}
+                    </h3>
+                    
+                    <!-- Награды -->
+                    <div style="margin-bottom:24px;">
+                        ${rewardsHTML}
+                    </div>
+                    
+                    <!-- Кнопка -->
+                    <button id="reward-ok" style="
+                        background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+                        border: none;
+                        border-radius: 12px;
+                        color: #fff;
+                        font-size: 16px;
+                        font-weight: 600;
+                        padding: 12px 32px;
+                        cursor: pointer;
+                        transition: all 0.2s ease;
+                        box-shadow: 0 4px 12px rgba(76,175,80,0.3);
+                        text-transform: uppercase;
+                        letter-spacing: 0.5px;
+                    " onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 16px rgba(76,175,80,0.4)'" 
+                       onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 12px rgba(76,175,80,0.3)'">
+                        Отлично!
+                    </button>
+                </div>
+            `;
+            
+            overlay.style.display = 'flex';
+            overlay.querySelector('#reward-ok').onclick = () => {
+                overlay.style.display = 'none';
+            };
+        }
+
+        // Тестовые функции
+        function testSafePurchase() {
+            showPurchaseNotification('Сейф открыт!', {
+                money: 659,
+                credits: 4,
+                xp: 10
+            }, 'safes');
+        }
+
+        function testCoinPurchase() {
+            // Симулируем покупку монет с редкостью 3 (6 XP)
+            showPurchaseNotification('Монеты получены!', { credits: 100, xp: 6 }, 'coins');
+        }
+        function testSetPurchase() {
+            // Симулируем покупку набора с редкостью 4 (20 XP)
+            showPurchaseNotification('Набор Блуми куплен!', { money: 750, xp: 20 }, 'sets');
+        }
+
+        function testReward() {
+            showRewardNotification('Задание выполнено!', {
+                money: 500,
+                credits: 25,
+                xp: 50
+            });
+        }
+
+        // Добавляем CSS анимацию
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes purchasePop {
+                0% {
+                    transform: scale(0.3) rotate(-10deg);
+                    opacity: 0;
+                }
+                50% {
+                    transform: scale(1.05) rotate(2deg);
+                }
+                100% {
+                    transform: scale(1) rotate(0deg);
+                    opacity: 1;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html> 

@@ -1,0 +1,31 @@
+:root{
+  --color-background-jaguar:#080110;
+  --color-background-tolopea:#1b0245;
+  --color-background-port-gore:#251f4f;
+  --color-island-black-jaguar:#080110;
+  --color-island-black-mirage:#161928;
+  --color-island-black-mirage-80:#161928;
+  --color-island-black-charade:#292937;
+  --color-island-black-charade-80:#292937;
+  --color-island-white-silver:#c0c0c0;
+  --color-island-white-athens-gray:#eef0f3;
+  --color-island-white-white:#ffffff;
+  --color-island-white-white-40:#ffffff;
+  --color-island-white-white-20:#ffffff;
+  --color-text-vulcan:#10121d;
+  --color-text-vulcan-70:#10121d;
+  --color-text-white:#ffffff;
+  --color-text-white-70:#ffffff;
+  --color-text-white-50:#ffffff;
+  --color-main-color-blue-violet:#8a2be2;
+  --color-main-color-blue-ribbon:#0066ff;
+  --color-main-color-flush-orange:#ff7f00;
+  --color-main-color-tussock:#c5994b;
+  --color-main-color-forest-green:#228b22;
+  --color-secondary-color-lime-aka-green:#00ff00;
+  --color-secondary-color-razzmatazz:#e30b5c;
+  --gradient-background-dark-purple-gradient:linear-gradient(180deg,#1b0245 0%,#080110 100%);
+  --gradient-island-color-purple-gradient:linear-gradient(180deg,#8a2be2 0%,#2c0075 100%);
+  --gradient-island-color-blue-gradient:linear-gradient(179.99999479069646deg,#0066ff 0%,#382fcf 100%);
+  --gradient-island-color-orange-gradient:linear-gradient(86.6527841530999deg,#da3e13 0%,#ff7f00 100%);
+}
